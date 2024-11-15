@@ -15,16 +15,16 @@ One command, `./zap` - and you've got yourself a TDX box.
 2. Deploy the flashbox VM:
 ```bash
 # Local deployment (non-TDX)
-./zap --mode normal --image flashbox.raw
+./zap --mode normal
 
 # Local deployment (TDX)
-./zap --mode tdx --image flashbox.raw
+./zap --mode tdx
 
 # Azure deployment
-./zap azure myvm eastus flashbox.azure.vhd
+./zap azure myvm eastus
 
 # GCP deployment
-./zap gcp myvm us-east4 flashbox.tar.gz
+./zap gcp myvm us-east4
 ```
 
 ### Known Issues

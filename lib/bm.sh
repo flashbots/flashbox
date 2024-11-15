@@ -1,10 +1,12 @@
 #!/bin/bash
 
+# This script can run both standard QEMU VMs and TDX-enabled VMs
+
 usage() {
     echo "Usage: $0 [options]"
     echo "Options:"
     echo "  --mode <normal|tdx>       VM mode (default: normal)"
-    echo "  --image PATH              Path to VM image (required)"
+    echo "  --image PATH              Path to VM image (optional, will download flashbox.raw if not provided)"
     echo "  --ram SIZE                RAM size in GB (default: 32)"
     echo "  --cpus NUMBER             Number of CPUs (default: 16)"
     echo "  --ssh-port PORT           SSH port forwarding (default: 10022)"
@@ -25,6 +27,25 @@ cleanup() {
     sleep 3
 }
 
+download_flashbox() {
+    if [ -f "flashbox.raw" ]; then
+        echo "Using existing flashbox.raw"
+    else
+        echo "Downloading flashbox.raw..."
+        DOWNLOAD_URL=$(curl -s https://api.github.com/repos/flashbots/flashbox/releases/latest | grep "browser_download_url.*flashbox\.raw" | cut -d '"' -f 4)
+        if [ -z "$DOWNLOAD_URL" ]; then
+            echo "Error: Could not find download URL for flashbox.raw"
+            exit 1
+        fi
+        wget "$DOWNLOAD_URL" || {
+            echo "Error: Failed to download flashbox.raw"
+            exit 1
+        }
+    fi
+    echo "flashbox.raw is ready"
+    VM_IMG="flashbox.raw"
+}
+
 # Default values
 MODE="normal"
 RAM_SIZE="32"
@@ -34,6 +55,7 @@ ADDITIONAL_PORTS=""
 PROCESS_NAME="qemu-vm"
 LOGFILE="/tmp/qemu-guest.log"
 OVMF_PATH="/usr/share/ovmf/OVMF.fd"
+VM_IMG=""
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -84,10 +106,9 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Check required parameters
+# If no image path provided, download flashbox.raw
 if [ -z "$VM_IMG" ]; then
-    echo "Error: VM image path is required"
-    usage
+    download_flashbox
 fi
 
 # Verify mode
@@ -130,6 +151,7 @@ QEMU_CMD="qemu-system-x86_64 -D $LOGFILE \
     -cpu host \
     -nographic \
     -nodefaults \
+    -daemonize \
     ${PORT_FORWARDS} \
     -drive file=${VM_IMG},if=none,id=virtio-disk0 \
     -device virtio-blk-pci,drive=virtio-disk0 \

@@ -14,14 +14,45 @@ usage() {
     echo ""
     echo "Arguments:"
     echo "  name                      Resource name/prefix for the deployment"
-    echo "  region                    Cloud region to deploy in (default: eastus for Azure, us-east4 for GCP)"
-    echo "  image-path               Path to VM image (required for deploy)"
+    echo "  region                    Cloud region to deploy in (default: westeurope for Azure, us-east4 for GCP)"
+    echo "  image-path               Path to VM image (optional, will download appropriate image if not provided)"
     echo ""
     echo "Options:"
     echo "  --machine-type TYPE      VM size (default: Standard_EC4eds_v5 for Azure, c3-standard-4 for GCP)"
     echo "  --ports PORTS            Additional ports to open, comma-separated (24070,24071 always open)"
     echo "  --ssh-source-ip IP       Restrict SSH access to this IP address"
     exit 1
+}
+
+download_flashbox() {
+    local cloud=$1
+    local image_name
+    local expected_file
+    
+    if [[ "$cloud" == "azure" ]]; then
+        image_name="flashbox.azure.vhd"
+        expected_file="$image_name"
+    else
+        image_name="flashbox.raw.tar.gz"
+        expected_file="$image_name"
+    fi
+
+    if [ -f "$expected_file" ]; then
+        echo "Using existing $expected_file"
+    else
+        echo "Downloading $image_name..."
+        local DOWNLOAD_URL=$(curl -s https://api.github.com/repos/flashbots/flashbox/releases/latest | grep "browser_download_url.*${image_name}" | cut -d '"' -f 4)
+        if [ -z "$DOWNLOAD_URL" ]; then
+            echo "Error: Could not find download URL for $image_name"
+            exit 1
+        fi
+        wget "$DOWNLOAD_URL" || {
+            echo "Error: Failed to download $image_name"
+            exit 1
+        }
+    fi
+    echo "$expected_file is ready"
+    echo "$expected_file"
 }
 
 check_dependencies() {
@@ -98,9 +129,6 @@ create_azure_deployment() {
     # Create NSG with base rules
     echo "Creating network security group..."
     az network nsg create --name "$name" --resource-group "$name" --location "$region"
-
-    # Add a small delay to ensure NSG is fully created
-    sleep 5
     
     # Add SSH rule with optional IP restriction
     local ssh_source="${ssh_source_ip:-*}"
@@ -277,11 +305,10 @@ fi
 # Execute command
 case $COMMAND in
     deploy)
-        if [[ -z "$IMAGE_PATH" ]]; then
-            echo "Error: Image path required for deploy command"
-            usage
-        fi
         check_dependencies "$CLOUD"
+        if [[ -z "$IMAGE_PATH" ]]; then
+            IMAGE_PATH=$(download_flashbox "$CLOUD")
+        fi
         if [[ "$CLOUD" == "azure" ]]; then
             create_azure_deployment "$NAME" "$REGION" "$IMAGE_PATH" "$MACHINE_TYPE" "$SSH_SOURCE_IP" "$ADDITIONAL_PORTS"
         else
