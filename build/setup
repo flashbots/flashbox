@@ -1,0 +1,48 @@
+#!/bin/bash
+
+# Check if the first argument is -v or --verbose
+verbose=0
+if [[ $1 == "-v" ]] || [[ $1 == "--verbose" ]]; then
+    verbose=1
+    # Shift the positional parameters to the left, effectively removing the first argument
+    shift
+fi
+
+# Define a function for verbose output
+function verbose_output {
+    if [[ $verbose -eq 1 ]]; then
+        echo "$1"
+    fi
+}
+
+# Set CURRENT_PATH to the current working directory
+CURRENT_PATH=$(pwd)
+verbose_output "Set CURRENT_PATH to $CURRENT_PATH"
+
+
+# Source the oe-init-build-env script
+source poky/oe-init-build-env
+verbose_output "Sourced the oe-init-build-env script"
+
+# Add the necessary layers to bblayers.conf
+bitbake-layers add-layer ../meta-confidential-compute
+bitbake-layers add-layer ../meta-openembedded/meta-oe
+bitbake-layers add-layer ../meta-openembedded/meta-python
+bitbake-layers add-layer ../meta-secure-core/meta-tpm2
+bitbake-layers add-layer ../meta-openembedded/meta-networking
+bitbake-layers add-layer ../meta-openembedded/meta-filesystems
+bitbake-layers add-layer ../meta-virtualization
+bitbake-layers add-layer ../meta-confidential-containers
+
+verbose_output "Added the meta-evm and meta-confidential-compute layers to bblayers.conf"
+
+# Apply patches
+for patch in $CURRENT_PATH/.repo/manifests/build/patches/patch-*; do
+    # Extract the filename from the patch file and remove the "patch-" prefix
+    filename=$(basename $patch | sed 's/^patch-//')
+    verbose_output "Processing patch file $patch"
+
+    # Apply the patch to the corresponding file in srcs/poky/build/conf/
+    patch -N $CURRENT_PATH/build/conf/$filename -i $patch
+    verbose_output "Applied patch to $CURRENT_PATH/build/conf/$filename"
+done
