@@ -156,8 +156,7 @@ QEMU_CMD="qemu-system-x86_64 -D $LOGFILE \
     -drive file=${VM_IMG},if=none,id=virtio-disk0 \
     -device virtio-blk-pci,drive=virtio-disk0 \
     -bios ${OVMF_PATH} \
-    -chardev stdio,id=char0,mux=on,signal=off \
-    -mon chardev=char0 \
+    -chardev null,id=char0 \
     -serial chardev:char0 \
     -pidfile /tmp/qemu-pid.pid"
 
