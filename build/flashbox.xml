@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <remote name="flashbots"  fetch="https://github.com/flashbots"/>
+
+  <default sync-j="4"/>
+
+  <project remote="flashbots"       revision="scarthgap"        name="poky"                            path="poky"/>
+  <project remote="flashbots"       revision="scarthgap"        name="meta-openembedded"               path="meta-openembedded"/>
+  <project remote="flashbots"       revision="scarthgap"        name="meta-secure-core"                path="meta-secure-core"/>
+  <project remote="flashbots"       revision="scarthgap"        name="meta-virtualization"             path="meta-virtualization"/>
+  <project remote="flashbots"       revision="machine_refactor" name="meta-confidential-compute"       path="meta-confidential-compute"/>
+  <project remote="flashbots"       revision="main"             name="meta-confidential-containers"    path="meta-confidential-containers"/>
+</manifest>
